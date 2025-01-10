@@ -4,49 +4,69 @@ from datetime import datetime, date, timedelta
 # import openpyxl
 from workalendar.europe import Belgium
 
-START_HOUR = 6
-STOP_HOUR = 20
-WEEK_DAYS = (1, 2, 3, 4, 5)
-
 UMONS_HOLIDAYS = {
-    2023: {
-        date(2023, 1, 2),
-        date(2023, 1, 3),
-        date(2023, 1, 4),
-        date(2023, 1, 5),
-        date(2023, 1, 6),
-        date(2023, 9, 27),
-        date(2023, 12, 26),
-        date(2023, 12, 27),
-        date(2023, 12, 28),
-        date(2023, 12, 29),
-    },
-    2024: {
-        date(2024, 1, 2),
-        date(2024, 1, 3),
-        date(2024, 1, 4),
-        date(2024, 1, 5),
-        date(2024, 9, 27),
-        date(2024, 12, 23),
-        date(2024, 12, 24),
-        date(2024, 12, 26),
-        date(2024, 12, 27),
-        date(2024, 12, 30),
-        date(2024, 12, 31),
-    },
-    2025: {
-        date(2025, 1, 2),
-        date(2025, 1, 3),
-        date(2025, 9, 27),
-        date(2025, 12, 22),
-        date(2025, 12, 23),
-        date(2025, 12, 24),
-        date(2025, 12, 26),
-        date(2025, 12, 29),
-        date(2025, 12, 30),
-        date(2025, 12, 31),
-    },
+    2023: (
+        (date(2023, 1, 2), "Récupération du 01/01/2023"),
+        (date(2023, 1, 3), "Vacances d'hiver"),
+        (date(2023, 1, 4), "Vacances d'hiver"),
+        (date(2023, 1, 5), "Vacances d'hiver"),
+        (date(2023, 1, 6), "Vacances d'hiver"),
+        (date(2023, 9, 27), "Fête de la Communauté française"),
+        (date(2023, 12, 26), "Noël second jour"),
+        (date(2023, 12, 27), "Récupération du 11/11/2023"),
+        (date(2023, 12, 28), "Vacances d'hiver"),
+        (date(2023, 12, 29), "Vacances d'hiver"),
+    ),
+    2024: (
+        (date(2024, 1, 2), "Vacances d'hiver"),
+        (date(2024, 1, 3), "Vacances d'hiver"),
+        (date(2024, 9, 27), "Fête de la Communauté française"),
+        (date(2024, 12, 23), "Récupération du 21/07/2024"),
+        (date(2024, 12, 24), "Vacances d'hiver"),
+        (date(2024, 12, 26), "Noël second jour"),
+        (date(2024, 12, 27), "Vacances d'hiver"),
+        (date(2024, 12, 30), "Vacances d'hiver"),
+        (date(2024, 12, 31), "Vacances d'hiver"),
+    ),
+    2025: (
+        (date(2025, 1, 2), "Vacances d'hiver"),
+        (date(2025, 1, 3), "Vacances d'hiver"),
+        (date(2025, 9, 27), "Fête de la Communauté française"),
+        (date(2025, 12, 22), "Récupération du 27/09/2025"),
+        (date(2025, 12, 23), "Récupération du 01/11/2025"),
+        (date(2025, 12, 24), "Vacances d'hiver"),
+        (date(2025, 12, 26), "Noël second jour"),
+        (date(2025, 12, 29), "Vacances d'hiver"),
+        (date(2025, 12, 30), "Vacances d'hiver"),
+        (date(2025, 12, 31), "Vacances d'hiver"),
+    ),
 }
+
+TRANSLATIONS = {
+    'New year': "Nouvel an",
+    'Easter Monday': "Lundi de Pâques",
+    'Labour Day': "Fête du travail",
+    'Ascension Thursday':   "Jeudi de l'Ascension",
+    'Whit Monday': "Lundi de Pentecôte",
+    'National Day': "Fête nationale",
+    'Assumption of Mary to Heaven': "Assomption",
+    'All Saints Day': "Toussaint",
+    'Armistice of 1918': "Armistice (1918)",
+    'Christmas Day': "Noël",
+}
+
+
+def get_umons_holidays_by_year(year: int) -> list:
+    """Get the UMONS holidays for a given year.
+
+    Args:
+        year (int): the year.
+
+    Returns:
+        list: the list of holidays.
+    """
+    umons_holidays = UMONS_HOLIDAYS.get(year, [])
+    return list(map(lambda x: x[0], umons_holidays))
 
 
 def get_work_holidays_by_year(year: int) -> list:
@@ -84,7 +104,7 @@ def is_an_umons_holiday(_datetime: datetime) -> bool:
 
     current_date = _datetime.date()
 
-    if current_date in UMONS_HOLIDAYS.get(_year, []):
+    if current_date in get_umons_holidays_by_year(_year):
         return True
 
     return False
@@ -106,10 +126,34 @@ def is_an_holiday(_datetime: datetime, include_umons_holidays: bool = True) -> b
     if current_date in get_work_holidays_by_year(_year):
         return True
 
-    if current_date in UMONS_HOLIDAYS.get(_year, []) and include_umons_holidays:
+    if current_date in get_umons_holidays_by_year(_year) and include_umons_holidays:
         return True
 
     return False
+
+
+def get_holiday_name(_datetime: datetime) -> str:
+    """Get the name of the holiday for the given date.
+
+    Args:
+        _datetime (datetime): the datetime object.
+
+    Returns:
+        str: the name of the holiday.
+    """
+    _year = _datetime.year
+
+    current_date = _datetime.date()
+
+    for holiday in Belgium().holidays(_year):
+        if holiday[0] == current_date:
+            return TRANSLATIONS.get(holiday[1], holiday[1])
+
+    for holiday in UMONS_HOLIDAYS.get(_year, []):
+        if holiday[0] == current_date:
+            return holiday[1]
+
+    return ""
 
 
 def is_weekend(_datetime: datetime) -> bool:
