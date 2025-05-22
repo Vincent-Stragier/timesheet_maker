@@ -1,5 +1,7 @@
 """Module to filter the data"""
-from datetime import datetime, date, timedelta
+
+import random
+from datetime import date, datetime, timedelta
 
 # import openpyxl
 from workalendar.europe import Belgium
@@ -43,16 +45,16 @@ UMONS_HOLIDAYS = {
 }
 
 TRANSLATIONS = {
-    'New year': "Nouvel an",
-    'Easter Monday': "Lundi de Pâques",
-    'Labour Day': "Fête du travail",
-    'Ascension Thursday':   "Jeudi de l'Ascension",
-    'Whit Monday': "Lundi de Pentecôte",
-    'National Day': "Fête nationale",
-    'Assumption of Mary to Heaven': "Assomption",
-    'All Saints Day': "Toussaint",
-    'Armistice of 1918': "Armistice (1918)",
-    'Christmas Day': "Noël",
+    "New year": "Nouvel an",
+    "Easter Monday": "Lundi de Pâques",
+    "Labour Day": "Fête du travail",
+    "Ascension Thursday": "Jeudi de l'Ascension",
+    "Whit Monday": "Lundi de Pentecôte",
+    "National Day": "Fête nationale",
+    "Assumption of Mary to Heaven": "Assomption",
+    "All Saints Day": "Toussaint",
+    "Armistice of 1918": "Armistice (1918)",
+    "Christmas Day": "Noël",
 }
 
 
@@ -110,7 +112,9 @@ def is_an_umons_holiday(_datetime: datetime) -> bool:
     return False
 
 
-def is_an_holiday(_datetime: datetime, include_umons_holidays: bool = True) -> bool:
+def is_an_holiday(
+    _datetime: datetime, include_umons_holidays: bool = True
+) -> bool:
     """Check if the datetime element is part of an holiday.
 
     Args:
@@ -126,7 +130,10 @@ def is_an_holiday(_datetime: datetime, include_umons_holidays: bool = True) -> b
     if current_date in get_work_holidays_by_year(_year):
         return True
 
-    if current_date in get_umons_holidays_by_year(_year) and include_umons_holidays:
+    if (
+        current_date in get_umons_holidays_by_year(_year)
+        and include_umons_holidays
+    ):
         return True
 
     return False
@@ -241,6 +248,222 @@ def number_of_days_in_month(year: int, month: int) -> int:
         int: the number of days in the given month.
     """
     return last_day_of_month(datetime(year, month, 1)).day
+
+
+def get_description(
+    current_date: datetime,
+    first_day: int,
+    last_day: int,
+    year: int,
+    researcher_holidays: list,
+    sick_days: list = None,
+):
+    """Generate the description for a given date.
+
+    Args:
+        date (datetime.datetime): The date to generate the description for.
+        first_day (int): The first day of the month.
+        last_day (int): The last day of the month.
+        year (int): The year of the date.
+        researcher_holidays (list): The list of researcher holidays.
+        sick_days (list): The list of sick days.
+
+    Returns:
+        str: The description for the given date.
+    """
+    weekends, work_holidays, umons_holidays = (
+        get_weekends_holidays_and_umons_holidays_for_year(year)
+    )
+
+    name = get_holiday_name(current_date)
+    day = current_date.day
+
+    if last_day < day or first_day > day:
+        return "Hors convention", day in weekends
+
+    if current_date in weekends:
+        return "Weekend", True
+
+    if current_date in work_holidays:
+        return f"JF - {name}", day in weekends
+
+    if current_date in umons_holidays:
+        if name.startswith("Récupération") or name.startswith(
+            "Fête de la Communauté française"
+        ):
+            return f"{name}", day in weekends
+        return f"Congé UMONS - {name}", day in weekends
+
+    if current_date in researcher_holidays:
+        return "Congé chercheur", day in weekends
+
+    if sick_days:
+        if current_date in sick_days:
+            return "Congé maladie", day in weekends
+
+    return "", day in weekends
+
+
+def get_random_hours_per_day(
+    min_hours: float, max_hours: float, under_min_probability: float
+):
+    """Get a random number of hours per day.
+
+    Args:
+        min_hours (float): The minimum number of hours per day.
+        max_hours (float): The maximum number of hours per day.
+        under_min_probability (float): The probability of getting a number of hours per day under the minimum.
+
+    Returns:
+        float: The number of hours per day.
+    """
+    duration = random.uniform(min_hours, max_hours)
+    half_probability = under_min_probability / 2
+
+    if (
+        not (half_probability < random.random() < 1 - half_probability)
+        and under_min_probability > 0
+    ):
+        return (min_hours / max_hours) * 0.99 * duration
+
+    return duration
+
+
+def get_work_days_duration(
+    number_of_days: int,
+    number_of_half_days: int,
+    min_hours: float,
+    max_hours: float,
+    quota: float = 1,
+    under_min_probability: float = 0.05,
+    time_increment: float = 0.5,
+) -> list:
+    """Get the duration of work days.
+
+    Args:
+        number_of_days (int): The number of days to get the duration for.
+        number_of_half_days (int): The number of half days to get the duration for.
+        min_hours (float): The minimum number of hours per day.
+        max_hours (float): The maximum number of hours per day.
+        quota (float): The quota of the researcher.
+        under_min_probability (float): The probability of getting a number of hours per day under the minimum.
+        time_increment (float): The time increment.
+
+    Returns:
+        list: The list of durations for the work days.
+    """
+
+    def _hours_per_day(
+        _number_of_days: int = number_of_days,
+        _min_hours: float = min_hours,
+        _max_hours: float = max_hours,
+        _under_min_probability: float = under_min_probability,
+    ) -> list:
+        """Get the hours per day.
+
+        Args:
+            number_of_days (int): The number of days to get the hours for.
+
+        Returns:
+            list: The list of hours per day.
+        """
+        hours_per_day = [
+            get_random_hours_per_day(
+                _min_hours,
+                _max_hours,
+                _under_min_probability,
+            )
+            for _ in range(_number_of_days)
+        ]
+
+        return [
+            round((hour * quota) / time_increment) * time_increment
+            for hour in hours_per_day
+        ]
+
+    # Full days
+    mean_duration = 0
+    while mean_duration < (min_hours + 0.1 * (max_hours - min_hours)) * quota:
+        durations = _hours_per_day(number_of_days)
+        mean_duration = sum(durations) / number_of_days
+
+    # Half days
+    half_days_mean = 0
+    while (
+        half_days_mean
+        < (min_hours + 0.1 * (max_hours - min_hours)) * quota / 2
+    ):
+
+        if number_of_half_days == 0:
+            half_days_durations = []
+            break
+
+        half_days_durations = _hours_per_day(
+            number_of_half_days,
+            min_hours / 2,
+            max_hours / 2,
+            under_min_probability,
+        )
+        half_days_mean = sum(half_days_durations) / number_of_half_days
+
+    return durations, half_days_durations
+
+
+def get_number_of_working_days(
+    year: int,
+    month: int,
+    first_day: int,
+    last_day: int,
+    researcher_holidays: list,
+    half_days: list = None,
+    sick_days: list = None,
+):
+    """Get the number of working days in a month.
+
+    Args:
+        year (int): The year of the month.
+        month (int): The month to get the number of working days for.
+        first_day (int): The first day of the month.
+        last_day (int): The last day of the month.
+        researcher_holidays (list): The list of researcher holidays.
+        sick_days (list): The list of sick days.
+
+    Returns:
+        tuple: The number of working days and the number of half days.
+    """
+    number_of_days = 0
+    number_of_half_days = 0
+
+    weekends, work_holidays, umons_holidays = (
+        get_weekends_holidays_and_umons_holidays_for_year(year)
+    )
+
+    for day in range(first_day, last_day + 1):
+        current_date = datetime(year, month, day)
+        if current_date in weekends:
+            continue
+
+        if current_date in work_holidays:
+            continue
+
+        if current_date in umons_holidays:
+            continue
+
+        if current_date in researcher_holidays:
+            continue
+
+        if sick_days is not None:
+            if current_date in sick_days:
+                continue
+
+        if half_days is not None:
+            if current_date in half_days:
+                number_of_half_days += 1
+                continue
+
+        number_of_days += 1
+
+    return number_of_days, number_of_half_days
 
 
 # def copy_sheet_with_styles(source_sheet, dest_sheet):
