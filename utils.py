@@ -3,7 +3,6 @@
 import random
 from datetime import date, datetime, timedelta
 
-# import openpyxl
 from workalendar.europe import Belgium
 
 UMONS_HOLIDAYS = {
@@ -466,39 +465,33 @@ def get_number_of_working_days(
     return number_of_days, number_of_half_days
 
 
-# def copy_sheet_with_styles(source_sheet, dest_sheet):
-#     """Copy the content and styles from a source sheet to a destination sheet.
+def get_start_date_in_year(year: int, start_date: datetime) -> datetime:
+    """Get the start date in the given year.
 
-#     Args:
-#         source_sheet (openpyxl.worksheet.worksheet.Worksheet): the source sheet.
-#         dest_sheet (openpyxl.worksheet.worksheet.Worksheet): the destination sheet.
-#     """
-#     for row in source_sheet.iter_rows():
-#         for cell in row:
-#             _has_style = False
-#             if isinstance(cell, openpyxl.cell.cell.Cell):
-#                 _has_style = cell.has_style
+    If the year is the same as the start date's year, return the start date.
+    Otherwise, return the first day of the year.
 
-#             if cell.value is not None or _has_style:  # Check for non-empty or styled cells
-#                 # Copy cell value
-#                 dest_cell = dest_sheet[cell.coordinate]
-#                 dest_cell.value = cell.value
+    Args:
+        year (int): The year to check.
+        start_date (datetime): The start date.
 
-#                 # Copy cell styles
-#                 if _has_style:
-#                     dest_cell.font = cell.font
-#                     dest_cell.fill = cell.fill
-#                     dest_cell.border = cell.border
-#                     dest_cell.alignment = cell.alignment
-#                     dest_cell.number_format = cell.number_format
-#                     dest_cell.protection = cell.protection
+    Returns:
+        datetime: The start date in the given year.
+    """
+    return start_date if year == start_date.year else datetime(year, 1, 1)
 
-#     # Copy column widths
-#     for col_letter, column_dimension in source_sheet.column_dimensions.items():
-#         if column_dimension.width:
-#             dest_sheet.column_dimensions[col_letter].width = column_dimension.width
 
-#     # Copy row heights
-#     for row_number, row_dimension in source_sheet.row_dimensions.items():
-#         if row_dimension.height:
-#             dest_sheet.row_dimensions[row_number].height = row_dimension.height
+def get_end_date_in_year(year: int, end_date: datetime) -> datetime:
+    """Get the end date in the given year.
+
+    If the year is the same as the end date's year, return the end date.
+    Otherwise, return the last day of the year.
+
+    Args:
+        year (int): The year to check.
+        end_date (datetime): The end date.
+
+    Returns:
+        datetime: The end date in the given year.
+    """
+    return end_date if year == end_date.year else datetime(year, 12, 31)
